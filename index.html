@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="id"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>GTwin</title>
+<style>
+:root{--bg:#eef2f4;--pn:#fff;--tx:#14212b;--mu:#66757f;--ac:#0b7a75;--ak:#fff;--bd:#d5dde2;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1519;--pn:#172127;--tx:#e4ebef;--mu:#8696a1;--ac:#4fd1c5;--ak:#04201e;--bd:#2a3841}}
+:root[data-theme="dark"]{--bg:#0e1519;--pn:#172127;--tx:#e4ebef;--mu:#8696a1;--ac:#4fd1c5;--ak:#04201e;--bd:#2a3841}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--tx);font:14px/1.4 "Segoe UI",system-ui,sans-serif;overflow:hidden}
+[hidden]{display:none!important}
+#app{display:flex;flex-direction:column;height:100%}
+#bar{display:flex;gap:8px;align-items:center;padding:8px 10px;background:var(--pn);border-bottom:1px solid var(--bd);overflow-x:auto}
+#bar h1{font-size:17px;margin:0 6px 0 2px;letter-spacing:.2px}
+#st{font-size:12px;color:var(--mu);white-space:nowrap;margin-left:auto;display:flex;align-items:center;gap:6px}
+#dot{width:8px;height:8px;border-radius:50%;background:#2ea043}
+.b,select{font:500 13px inherit;font-family:inherit;padding:7px 11px;border:1px solid var(--bd);background:var(--pn);color:var(--tx);border-radius:7px;cursor:pointer;white-space:nowrap}
+.b:focus-visible,select:focus-visible,.ib:focus-visible{outline:2px solid var(--ac);outline-offset:1px}
+.b[aria-pressed=true]{background:var(--ac);color:var(--ak);border-color:var(--ac)}
+#stage{flex:1;min-height:0;position:relative}
+#cv{width:100%;height:100%;display:block;touch-action:none;cursor:pointer}
+#pn,#pp{position:absolute;top:10px;max-height:calc(100% - 20px);overflow:auto;background:var(--pn);border:1px solid var(--bd);border-radius:10px;padding:10px}
+#pn{left:10px;width:270px}
+#pp{right:10px;width:340px}
+.ph{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:2px 0 6px}
+.ph b{overflow-wrap:anywhere}
+.ph .b{padding:3px 8px}
+.mr{display:flex;align-items:center;gap:6px;padding:3px 0}
+.mr input{margin:0}
+.mr .mn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ib{font:inherit;font-size:12px;padding:2px 7px;border:1px solid var(--bd);background:var(--pn);color:var(--tx);border-radius:6px;cursor:pointer}
+.mh{font-weight:700;margin-top:10px;overflow-wrap:anywhere}
+.fl{font-weight:600;margin-top:6px}
+.rm{padding:4px 8px;border-radius:6px;cursor:pointer;color:var(--mu)}
+.rm:hover{background:var(--bd)}.rm.on{background:var(--ac);color:var(--ak)}
+.mu{color:var(--mu);margin:2px 0 8px;overflow-wrap:anywhere}
+details{border-top:1px solid var(--bd);padding:2px 0}
+summary{cursor:pointer;font-weight:600;padding:6px 0;overflow-wrap:anywhere}
+.pt{width:100%;border-collapse:collapse;font-size:12.5px;margin-bottom:6px}
+.pt td{padding:3px 8px 3px 0;vertical-align:top;overflow-wrap:anywhere;word-break:break-word}
+.pt td:first-child{color:var(--mu);width:42%}
+#hint{position:absolute;left:10px;bottom:10px;max-width:calc(100% - 20px);background:var(--pn);border:1px solid var(--bd);padding:7px 11px;border-radius:8px}
+@media (max-width:700px){#pn,#pp{top:auto;bottom:10px;left:10px;right:10px;width:auto;max-height:44%}#hint{bottom:auto;top:10px}}
+#lg{position:fixed;inset:0;z-index:10;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:16px}
+#lgf{width:100%;max-width:340px;background:var(--pn);border:1px solid var(--bd);border-radius:12px;padding:20px}
+#lgf h2{margin:0 0 4px;font-size:20px}
+#lgf label{display:block;margin:10px 0;font-weight:500}
+#lgf input{display:block;width:100%;box-sizing:border-box;margin-top:4px;padding:8px 10px;border:1px solid var(--bd);border-radius:7px;background:var(--bg);color:var(--tx);font:inherit}
+#lgf input:focus-visible{outline:2px solid var(--ac);outline-offset:1px}
+#lgf .b{width:100%;margin-top:4px}
+#lgm{min-height:1.4em}
+.b:disabled{opacity:.5;cursor:default}
+</style></head>
+<body><div id="app">
+<div id="bar">
+<h1>GTwin</h1>
+<button class="b" id="bo" title="Pilih satu atau beberapa file IFC">Buka IFC</button>
+<select id="fl" aria-label="Filter lantai"></select>
+<button class="b" data-t="ruang">Ruang</button>
+<button class="b" data-t="panel">Struktur model</button>
+<button class="b" id="lo" hidden>Keluar</button>
+<span id="st"><span id="dot"></span><span id="stt">Model contoh</span></span>
+<input type="file" id="fi" accept=".ifc" multiple hidden>
+</div>
+<div id="stage"><canvas id="cv"></canvas>
+<aside id="pn"><div class="ph"><b>Model</b><button class="b" id="cl">Tutup</button></div><div id="lib" hidden></div><div id="ml"></div><div id="tree"></div></aside>
+<aside id="pp" hidden></aside>
+<div id="hint" hidden></div></div></div>
+<div id="lg"><form id="lgf"><h2>GTwin</h2><p class="mu">Masuk untuk membuka pustaka model.</p>
+<label>Nama pengguna<input id="lgu" autocomplete="username" required></label>
+<label>Kata sandi<input id="lgp" type="password" autocomplete="current-password" required></label>
+<button class="b" id="lgb" style="background:var(--ac);color:var(--ak);border-color:var(--ac)">Masuk</button>
+<p id="lgm" class="mu" role="alert">Memeriksa vault…</p></form></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="vault.js"></script>
+<script>
+const $=s=>document.querySelector(s),esc=s=>String(s).replace(/[&<>"]/g,c=>'&#'+c.charCodeAt(0)+';');
+const cv=$('#cv'),pp=$('#pp'),S={ruang:1,panel:innerWidth>700?1:0};
+const R=new THREE.WebGLRenderer({canvas:cv,antialias:true,alpha:true}),sc=new THREE.Scene(),camr=new THREE.PerspectiveCamera(45,1,.1,300);
+R.setPixelRatio(Math.min(devicePixelRatio,2));
+sc.add(new THREE.HemisphereLight(0xffffff,0x8899aa,.95));
+const dl=new THREE.DirectionalLight(0xffffff,.6);dl.position.set(10,25,12);sc.add(dl);
+const gr=new THREE.GridHelper(60,30,0x8a98a5,0x8a98a5);gr.material.transparent=true;gr.material.opacity=.25;gr.position.y=-.05;sc.add(gr);
+let K=1,MY=5,CEN=[0,0],mid=0,ORG=null,ST={},MS={};
+const DS=THREE.DoubleSide,wm=new THREE.MeshStandardMaterial({color:0xdde5eb,side:DS}),sm=new THREE.MeshStandardMaterial({color:0xb4c0c9,side:DS}),edge=new THREE.LineBasicMaterial({color:0x56707d,transparent:true,opacity:.6}),
+HM=new THREE.MeshBasicMaterial({color:0xff8a00,transparent:true,opacity:.9,side:DS,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2});
+let models=[],floors=[],rooms=[],levels=[],ELS={},sel=null,hl=null,hlOwn=0,th=.8,ph=1,r=34,tg=new THREE.Vector3(0,5,0);
+const rc=new THREE.Raycaster(),mo=new THREE.Vector2();
+const hint=t=>{$('#hint').textContent=t;$('#hint').hidden=!t},status=t=>{$('#stt').textContent=t};
+function cam(){camr.position.set(tg.x+r*Math.sin(ph)*Math.sin(th),tg.y+r*Math.cos(ph),tg.z+r*Math.sin(ph)*Math.cos(th));camr.lookAt(tg)}
+function focus(p,d){tg.copy(p);r=d;cam()}
+function scl(){gr.scale.setScalar(Math.max(K,.5));camr.near=.1*Math.max(K,1);camr.far=Math.max(300,K*400);camr.updateProjectionMatrix()}
+function vis(){const f=$('#fl').value;floors.forEach(F=>{F.g.visible=f=='all'||+f==F.lv;F.rooms.forEach(q=>q.mesh.visible=!!S.ruang)})}
+function sync(){document.querySelectorAll('[data-t]').forEach(b=>b.setAttribute('aria-pressed',!!S[b.dataset.t]));$('#pn').hidden=!S.panel;vis()}
+function list(){
+$('#ml').innerHTML=models.map((m,i)=>`<div class="mr"><input type="checkbox" data-v="${i}"${m.on?' checked':''} aria-label="Tampilkan ${esc(m.name)}"><span class="mn" title="${esc(m.name)}">${esc(m.name)}</span><button class="ib" data-z="${i}" title="Zoom ke model ini">Fokus</button>${m.demo?'':`<button class="ib" data-x="${i}" title="Hapus model ini">×</button>`}</div>`).join('');
+$('#tree').innerHTML=models.map((m,mi)=>(models.length>1?`<div class="mh">${esc(m.name)}</div>`:'')+m.floors.map((F,fi)=>`<div class="fl rm" data-f="${mi}-${fi}">${esc(F.name)}</div>`+F.rooms.map((q,ri)=>`<div class="rm${sel&&sel.room===q?' on':''}" data-r="${mi}-${fi}-${ri}">${esc(q.name)}</div>`).join('')).join('')).join('')}
+function ui(){const n=Object.keys(ELS).length;status(models[0]&&models[0].demo?`Model contoh · ${n} elemen`:`${models.length} model · ${n} elemen`);sync();list();libRender()}
+function buildLevels(){const all=[...floors].sort((a,b)=>a.y-b.y);levels=[];all.forEach(F=>{let l=levels[levels.length-1];if(!l||F.y-l.y>.75)levels.push(l={y:F.y,name:F.name});F.lv=levels.length-1});
+$('#fl').innerHTML='<option value="all">Semua lantai</option>'+levels.map((l,i)=>`<option value="${i}">${esc(l.name)}</option>`).join('')}
+function fitAll(){if(!models.length)return;const b=[1e18,-1e18,1e18,-1e18,1e18,-1e18];models.forEach(m=>{const x=m.box;b[0]=Math.min(b[0],x.x0);b[1]=Math.max(b[1],x.x1);b[2]=Math.min(b[2],x.y0);b[3]=Math.max(b[3],x.y1);b[4]=Math.min(b[4],x.z0);b[5]=Math.max(b[5],x.z1)});
+const sx=b[1]-b[0],sy=b[3]-b[2],sz=b[5]-b[4];K=Math.max(sx,sz,1)/19;scl();CEN=[(b[0]+b[1])/2,(b[4]+b[5])/2];MY=(b[2]+b[3])/2;tg.set(CEN[0],MY,CEN[1]);r=Math.max(sx,sy,sz)*1.5+5;cam()}
+function fitModel(m){const x=m.box,sx=x.x1-x.x0,sy=x.y1-x.y0,sz=x.z1-x.z0;m.on=true;m.g.visible=true;focus(new THREE.Vector3((x.x0+x.x1)/2,(x.y0+x.y1)/2,(x.z0+x.z1)/2),Math.max(sx,sy,sz)*1.5+5);list()}
+/* sorotan & properti */
+function hlOff(){if(hl){if(hl.parent)hl.parent.remove(hl);if(hlOwn)hl.geometry.dispose();hl=null}}
+function hlOn(el){hlOff();const m=el.mesh;if(!m)return;let g;if(el.s==null){g=m.geometry;hlOwn=0}else{g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(m.geometry.attributes.position.array.slice(el.s*9,el.e*9),3));hlOwn=1}
+hl=new THREE.Mesh(g,HM);hl.position.copy(m.position);hl.renderOrder=2;m.parent.add(hl)}
+function showP(el){if(!el){pp.hidden=true;return}
+let sec;try{if(el.m.E){E=el.m.E;REL=el.m.REL;UNIT=el.m.u}sec=el.demo||props(el)}catch(x){sec=[{t:'Informasi umum',r:[['Nama',el.n],['Kelas IFC',el.t]]}]}
+pp.innerHTML=`<div class="ph"><b>${esc(el.n||'Tanpa nama')}</b><button class="b" id="pc">Tutup</button></div><div class="mu">${esc(el.t)}</div>`+
+sec.map((s,i)=>`<details${i<3?' open':''}><summary>${esc(s.t)}</summary><table class="pt">${s.r.map(x=>`<tr><td>${esc(x[0])}</td><td>${esc(x[1])}</td></tr>`).join('')}</table></details>`).join('');
+pp.hidden=false;pp.scrollTop=0;if(innerWidth<=700&&S.panel){S.panel=0;sync()}}
+function select(el){sel=el||null;hlOff();rooms.forEach(q=>q.mesh.material.opacity=sel&&sel.room===q?.6:.28);if(sel&&!sel.room)hlOn(sel);if(sel)hint('');showP(sel);list()}
+pp.onclick=e=>{if(e.target.id=='pc')select(null)};
+addEventListener('keydown',e=>{if(e.key=='Escape')select(null)});
+/* material & tekstur */
+const KIND={plaster:[0xe9e4d8],concrete:[0xb9b9b3],brick:[0xb85f45],wood:[0x9a6b3f],tile:[0xd4d8da],metal:[0x8a9099],roof:[0xa8523a],stone:[0xaaa597],glass:[0xa6d3e8],plain:[0xd5d9dd]};
+function kindOf(t,names){const s=(names||'').toLowerCase();
+if(/glass|kaca|glas\b|vidr|verre/.test(s))return'glass';if(/brick|bata|baksteen|ziegel/.test(s))return'brick';if(/concrete|beton|cement|semen|screed/.test(s))return'concrete';
+if(/wood|kayu|timber|oak|pine|plywood|bamboo|bambu|parket|parquet/.test(s))return'wood';if(/steel|baja|metal|alumin|besi|iron|zinc|seng|copper|tembaga|stainless/.test(s))return'metal';
+if(/tile|keramik|ceramic|porcel/.test(s))return/roof|genteng/.test(s)?'roof':'tile';if(/genteng|roof/.test(s))return'roof';if(/stone|batu|granit|marmer|marble|slate/.test(s))return'stone';if(/plaster|gypsum|gipsum|paint|cat\b|plester|acian/.test(s))return'plaster';
+if(/^IFC(WINDOW|CURTAINWALL)/.test(t))return'glass';if(/^IFCDOOR/.test(t))return'wood';if(/^IFCROOF/.test(t))return'roof';if(/^IFC(SLAB|COLUMN|BEAM|FOOTING|PILE|STAIR|RAMP)/.test(t))return'concrete';
+if(/^IFC(RAILING|MEMBER|PLATE)/.test(t))return'metal';if(/^IFCCOVERING/.test(t))return'tile';if(/^IFC(FURNISHING|FURNITURE)/.test(t))return'wood';if(/^IFCWALL/.test(t))return'plaster';return'plain'}
+const MATS={};
+function mat(kind,hex,op){const k=hex+'|'+op.toFixed(2);if(MATS[k])return MATS[k];
+return MATS[k]=new THREE.MeshLambertMaterial({color:hex,transparent:op<.99,opacity:op,side:DS,depthWrite:op>=.99})}
+/* model contoh */
+const DN=['Lobi','Rapat','Server','Kantor 1','Kantor 2','Pantry'];
+function buildDemo(){const m={k:'demo',name:'Model contoh',demo:1,on:true,g:new THREE.Group(),floors:[],box:{x0:-9.5,x1:9.5,y0:0,y1:9.8,z0:-5.5,z1:5.5},cx:0,cz:0};let n=0,wn=0;
+['Lantai 1','Lantai 2','Lantai 3'].forEach((nm,i)=>{const g=new THREE.Group(),y=i*3.4,F={g,m,y,name:nm,pk:[],rooms:[]};
+const reg=(me,t,name,rows)=>{const id='d'+(++n),key='demo:'+id;me.userData.el=key;ELS[key]={key,id,t,n:name,F,m,mesh:me,demo:[{t:'Informasi umum',r:[['Nama',name],['Kelas IFC',t],['Lantai',nm],['Catatan','Model contoh bawaan. Buka file IFC untuk melihat properti asli.']]},{t:'Dimensi',r:rows}]};F.pk.push(me)};
+const slab=new THREE.Mesh(new THREE.BoxGeometry(19,.3,11),mat('concrete',0xb9b9b3,1));slab.position.y=y;g.add(slab);reg(slab,'IFCSLAB','Pelat '+nm,[['Panjang','19 m'],['Lebar','11 m'],['Tebal','0,3 m']]);
+const W=(w,d,x,z)=>{const geo=new THREE.BoxGeometry(w,3,d),me=new THREE.Mesh(geo,mat('plaster',0xe9e4d8,1)),l=new THREE.LineSegments(new THREE.EdgesGeometry(geo),edge);me.position.set(x,y+1.65,z);l.position.copy(me.position);g.add(me,l);reg(me,'IFCWALL','Dinding '+(++wn),[['Panjang',Math.max(w,d)+' m'],['Tebal',Math.min(w,d)+' m'],['Tinggi','3 m']])};
+[-9,-3,3,9].forEach(x=>W(.2,10,x,0));[-5,0,5].forEach(z=>W(18,.2,0,z));
+for(let k=0;k<2;k++)for(let c=0;c<3;c++){const j=k*3+c,x=-6+c*6,z=-2.5+k*5,mesh=new THREE.Mesh(new THREE.BoxGeometry(5.8,2.9,4.8),new THREE.MeshStandardMaterial({color:new THREE.Color().setHSL((j*.16+i*.05)%1,.55,.55),transparent:true,opacity:.28,depthWrite:false}));
+mesh.position.set(x,y+1.65,z);mesh.renderOrder=1;const id='d'+(++n),key='demo:'+id,q={key,id,name:DN[j],F,x,z,mesh};mesh.userData.r=q;
+ELS[key]={key,id,t:'IFCSPACE',n:q.name,F,m,room:q,demo:[{t:'Informasi umum',r:[['Nama',q.name],['Kelas IFC','IFCSPACE'],['Lantai',nm],['Catatan','Model contoh bawaan. Buka file IFC untuk melihat properti asli.']]},{t:'Dimensi',r:[['Luas','28 m²'],['Tinggi','2,9 m']]}]};F.rooms.push(q);rooms.push(q);g.add(mesh)}
+m.floors.push(F);m.g.add(g)});
+models.push(m);floors.push(...m.floors);sc.add(m.g);buildLevels();fitAll();ui()}
+/* klik elemen */
+function elOf(h){const u=h.object.userData;if(u.r)return ELS[u.r.key];if(u.el!=null)return ELS[u.el];const s=u.map.s;let lo=0,hi=s.length-2;while(lo<hi){const m=(lo+hi+1)>>1;if(s[m]<=h.faceIndex)lo=m;else hi=m-1}return ELS[u.map.ids[lo]]}
+function click(e){const b=cv.getBoundingClientRect();mo.set((e.clientX-b.left)/b.width*2-1,-(e.clientY-b.top)/b.height*2+1);rc.setFromCamera(mo,camr);
+const t=[...floors.filter(F=>F.g.visible&&F.m.on).flatMap(F=>F.pk),...(S.ruang?rooms.filter(q=>q.F.m.on&&q.F.g.visible).map(q=>q.mesh):[])],hs=rc.intersectObjects(t);let h=hs[0];
+if(h&&h.object.userData.r&&hs[1]&&!hs[1].object.userData.r&&hs[1].distance-h.distance<.03*K)h=hs[1];
+select(h?elOf(h):null)}
+/* kontrol kamera */
+const P=new Map();let d0=0,mv=0;const pd=()=>{const a=[...P.values()];return Math.hypot(a[0][0]-a[1][0],a[0][1]-a[1][1])||1},cl=(v,a,b)=>Math.min(b,Math.max(a,v));
+cv.addEventListener('pointerdown',e=>{cv.setPointerCapture(e.pointerId);P.set(e.pointerId,[e.clientX,e.clientY]);mv=0;if(P.size==2)d0=pd()});
+cv.addEventListener('pointermove',e=>{const o=P.get(e.pointerId);if(!o)return;const dx=e.clientX-o[0],dy=e.clientY-o[1];P.set(e.pointerId,[e.clientX,e.clientY]);mv+=Math.abs(dx)+Math.abs(dy);
+if(P.size==2){const d=pd();r=cl(r*d0/d,2*K,Math.max(90,200*K));d0=d}
+else if(e.shiftKey||e.buttons==2){const k=r/900;tg.x-=dx*k*Math.cos(th);tg.z+=dx*k*Math.sin(th);tg.y+=dy*k}
+else{th-=dx*.006;ph=cl(ph-dy*.006,.15,1.52)}cam()});
+cv.addEventListener('pointerup',e=>{if(P.size==1&&mv<6)click(e);P.delete(e.pointerId)});
+cv.addEventListener('pointercancel',e=>P.delete(e.pointerId));
+cv.addEventListener('wheel',e=>{e.preventDefault();r=cl(r*(1+e.deltaY*.001),2*K,Math.max(90,200*K));cam()},{passive:false});
+cv.addEventListener('contextmenu',e=>e.preventDefault());
+new ResizeObserver(()=>{const s=$('#stage');R.setSize(s.clientWidth,s.clientHeight,false);camr.aspect=s.clientWidth/s.clientHeight;camr.updateProjectionMatrix()}).observe($('#stage'));
+/* tombol */
+document.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{const k=b.dataset.t;S[k]=+!S[k];sync()});
+$('#cl').onclick=()=>{S.panel=0;sync()};
+$('#fl').onchange=()=>{vis();const v=$('#fl').value;tg.set(CEN[0],v=='all'?MY:levels[v].y+1.5*K,CEN[1]);cam()};
+$('#bo').onclick=()=>$('#fi').click();
+$('#pn').onclick=e=>{const bz=e.target.closest('[data-z]'),bx=e.target.closest('[data-x]');
+if(bz){fitModel(models[+bz.dataset.z]);return}
+if(bx){rmModel(models[+bx.dataset.x]);return}
+const w=e.target.closest('[data-f],[data-r]');if(!w)return;const fv=$('#fl');
+if(w.dataset.f!=null){const [mi,fi]=w.dataset.f.split('-'),F=models[mi].floors[fi];fv.value=F.lv;vis();focus(new THREE.Vector3(F.m.cx,F.y+1.5*K,F.m.cz),22*K)}
+else{const [mi,fi,ri]=w.dataset.r.split('-'),F=models[mi].floors[fi],q=F.rooms[ri];if(fv.value!='all'&&fv.value!=F.lv)fv.value=F.lv;S.ruang=1;sync();select(ELS[q.key]);focus(new THREE.Vector3(q.x,F.y+1.5*K,q.z),16*K)}};
+$('#pn').onchange=e=>{const c=e.target.closest('[data-v]');if(c){const m=models[+c.dataset.v];m.on=c.checked;m.g.visible=c.checked}};
+/* kelola model */
+function dropModel(m){if(sel&&sel.m===m)select(null);sc.remove(m.g);m.floors.forEach(F=>F.g.children.forEach(o=>{if(o.geometry&&o.geometry.dispose)o.geometry.dispose()}));
+models=models.filter(x=>x!==m);floors=floors.filter(F=>F.m!==m);rooms=rooms.filter(q=>q.F.m!==m);for(const k in ELS)if(ELS[k].m===m)delete ELS[k]}
+function rmModel(m){dropModel(m);if(!models.length){ORG=null;buildDemo()}else{buildLevels();fitAll();ui()}}
+/* parser STEP */
+const V=THREE.Vector3,V2=THREE.Vector2,M4=THREE.Matrix4,ad=(o,a)=>{for(let i=0;i<a.length;i++)o.push(a[i])},L=x=>Array.isArray(x)?x:x==null?[]:[x];
+let E,PC,REL={def:{},type:{},mat:{},cont:{}},UNIT=1;
+function dec(t){return t.replace(/\\X2\\([0-9A-F]+)\\X0\\/g,(_,h)=>h.match(/.{4}/g).map(c=>String.fromCharCode(parseInt(c,16))).join('')).replace(/\\X\\([0-9A-F]{2})/g,(_,h)=>String.fromCharCode(parseInt(h,16))).replace(/''/g,"'")}
+function pa(s){const t=s.match(/#\d+|'(?:[^']|'')*'|\.[A-Z_]+\.|[-+]?[\d.]+(?:[eE][-+]?\d+)?|\$|\*|\w+|[(),]/g)||[];let i=0;
+const v=()=>{const x=t[i++];if(x=='('){const a=[];while(i<t.length&&t[i]!=')'){if(t[i]==',')i++;else a.push(v())}i++;return a}
+if(x=='$'||x=='*')return null;if(x[0]=='#')return +x.slice(1);if(x[0]=="'")return dec(x.slice(1,-1));if(/^\.[A-Z_]+\.$/.test(x))return{e:x.slice(1,-1)};if(/^[-+\d.]/.test(x))return parseFloat(x);if(t[i]=='(')return v();return x};
+const o=[];while(i<t.length){if(t[i]==',')i++;else o.push(v())}return o}
+const A=id=>{const e=E[id];return e.p||(e.p=pa(e.s))},pt=id=>{const c=A(id)[0];return [c[0],c[1],c[2]||0]};
+function ax3(id){const a=A(id),o=pt(a[0]),z=a[1]?new V(...pt(a[1])).normalize():new V(0,0,1);let x=a[2]?new V(...pt(a[2])):new V(1,0,0);x.addScaledVector(z,-x.dot(z));
+if(x.lengthSq()<1e-9)x=Math.abs(z.x)<.9?new V(1,0,0).addScaledVector(z,-z.x):new V(0,1,0).addScaledVector(z,-z.y);x.normalize();
+return new M4().makeBasis(x,new V().crossVectors(z,x),z).setPosition(o[0],o[1],o[2])}
+function lp(id){if(PC[id])return PC[id];const a=A(id);let m=a[1]?ax3(a[1]):new M4();if(a[0])m=lp(a[0]).clone().multiply(m);return PC[id]=m}
+function cto(id){const a=A(id),x=a[0]?new V(...pt(a[0])).normalize():new V(1,0,0),y=a[1]?new V(...pt(a[1])).normalize():new V(0,1,0),z=a[4]?new V(...pt(a[4])).normalize():x.clone().cross(y),o=pt(a[2]),k=a[3]||1;
+return new M4().makeBasis(x.multiplyScalar(k),y.multiplyScalar(k),z.multiplyScalar(k)).setPosition(o[0],o[1],o[2])}
+function prof(id){const t=E[id].t,a=A(id);
+const T=q=>{if(!a[2])return q;const b=A(a[2]),l=pt(b[0]),d=b[1]?pt(b[1]):[1,0],g=Math.atan2(d[1],d[0]),c=Math.cos(g),n=Math.sin(g);return q.map(v=>[l[0]+v[0]*c-v[1]*n,l[1]+v[0]*n+v[1]*c])};
+if(/^IFCCIRCLE/.test(t))return T([...Array(24)].map((_,i)=>[a[3]*Math.cos(i/24*6.2832),a[3]*Math.sin(i/24*6.2832)]));
+if(/^IFCARBITRARY/.test(t)){const c=a[2];return c&&E[c].t=='IFCPOLYLINE'?A(c)[0].map(i=>pt(i).slice(0,2)):null}
+if(/PROFILEDEF$/.test(t)&&typeof a[3]=='number'&&typeof a[4]=='number'){const w=a[3]/2,h=a[4]/2;return T([[-w,-h],[w,-h],[w,h],[-w,h]])}
+return null}
+function tri(P,o){const n=P.length;if(n<3)return;
+if(n<=4){for(let i=1;i<n-1;i++)ad(o,[...P[0].toArray(),...P[i].toArray(),...P[i+1].toArray()]);return}
+const m=new V();for(let i=0;i<n;i++){const a=P[i],b=P[(i+1)%n];m.x+=(a.y-b.y)*(a.z+b.z);m.y+=(a.z-b.z)*(a.x+b.x);m.z+=(a.x-b.x)*(a.y+b.y)}
+m.normalize();const u=(Math.abs(m.x)>.9?new V(0,1,0):new V(1,0,0)).cross(m).normalize(),w=m.clone().cross(u);
+THREE.ShapeUtils.triangulateShape(P.map(p=>new V2(p.dot(u),p.dot(w))),[]).forEach(f=>f.forEach(k=>ad(o,P[k].toArray())))}
+function fcs(Lf,M0,o){for(const f of Lf){const B=A(f)[0],b=B.find(x=>E[x].t=='IFCFACEOUTERBOUND')||B[0];tri(A(A(b)[0])[0].map(i=>new V(...pt(i)).applyMatrix4(M0)),o)}}
+function item(id,M0,o){const t=E[id].t,a=A(id);
+if(t=='IFCEXTRUDEDAREASOLID'){const p=prof(a[0]);if(!p||p.length<3)return;const g=new THREE.ExtrudeGeometry(new THREE.Shape(p.map(q=>new V2(q[0],q[1]))),{depth:a[3],bevelEnabled:false}),m=M0.clone();if(a[1])m.multiply(ax3(a[1]));g.applyMatrix4(m);ad(o,g.attributes.position.array);g.dispose()}
+else if(t=='IFCFACETEDBREP')fcs(A(a[0])[0],M0,o);
+else if(t=='IFCSHELLBASEDSURFACEMODEL')a[0].forEach(x=>fcs(A(x)[0],M0,o));
+else if(t=='IFCTRIANGULATEDFACESET'){const P=A(a[0])[0].map(c=>new V(c[0],c[1],c[2]||0).applyMatrix4(M0));a[3].forEach(f=>f.forEach(k=>ad(o,P[k-1].toArray())))}
+else if(t=='IFCPOLYGONALFACESET'){const P=A(a[0])[0].map(c=>new V(c[0],c[1],c[2]||0).applyMatrix4(M0));a[2].forEach(f=>tri(A(f)[0].map(k=>P[k-1]),o))}
+else if(t=='IFCMAPPEDITEM'){const rm=A(a[0]),m=M0.clone().multiply(cto(a[1])).multiply(ax3(rm[0]).invert());A(rm[1])[3].forEach(i=>item(i,m,o))}
+else if(/^IFCBOOLEAN/.test(t))item(a[1],M0,o)}
+/* warna dari file IFC */
+function colRGB(id){const e=E[id];if(!e||e.t!='IFCCOLOURRGB')return null;const a=A(id);return typeof a[1]=='number'?[a[1],a[2],a[3]]:null}
+function styleCol(sid,d){d=d||0;if(!sid||!E[sid]||d>4)return null;const e=E[sid],a=A(sid);
+if(e.t=='IFCSTYLEDITEM'||e.t=='IFCPRESENTATIONSTYLEASSIGNMENT'||e.t=='IFCSURFACESTYLE'){for(const x of L(e.t=='IFCSTYLEDITEM'?a[1]:e.t=='IFCSURFACESTYLE'?a[2]:a[0])){const s=styleCol(x,d+1);if(s)return s}return null}
+if(e.t=='IFCSURFACESTYLERENDERING'){let c=colRGB(a[0]);const dc=colRGB(a[2]);if(dc)c=dc;return c&&{c,o:1-(typeof a[1]=='number'?a[1]:0)}}
+if(e.t=='IFCSURFACESTYLESHADING'){const c=colRGB(a[0]);return c&&{c,o:1-(typeof a[1]=='number'?a[1]:0)}}
+return null}
+function itemStyle(id,d){d=d||0;if(ST[id])return ST[id];if(d>3||!E[id])return null;const t=E[id].t,a=A(id);
+if(t=='IFCMAPPEDITEM'){const rm=A(a[0]);for(const i of L(A(rm[1])[3])){const s=itemStyle(i,d+1);if(s)return s}}
+else if(/^IFCBOOLEAN/.test(t))return itemStyle(a[1],d+1);
+return null}
+const rgb=c=>{const q=v=>Math.max(0,Math.min(255,Math.round(v*255)));return(q(c[0])<<16)|(q(c[1])<<8)|q(c[2])};
+/* properti elemen */
+function pv(x){if(Array.isArray(x))return x.map(pv).filter(v=>v!=='').join(', ');if(x==null)return'';if(typeof x=='object')return x.e=='T'?'Ya':x.e=='F'?'Tidak':x.e=='U'?'':x.e;if(typeof x=='number')return String(+x.toFixed(4));return String(x)}
+function prow(pid,pre){const pe=E[pid];if(!pe)return[];const q=A(pid),n=(pre||'')+(q[0]||''),t=pe.t;
+if(t=='IFCPROPERTYSINGLEVALUE'||t=='IFCPROPERTYENUMERATEDVALUE'||t=='IFCPROPERTYLISTVALUE')return[[n,pv(q[2])]];
+if(t=='IFCPROPERTYBOUNDEDVALUE')return[[n,[q[3]!=null?'min '+pv(q[3]):'',q[2]!=null?'maks '+pv(q[2]):''].filter(Boolean).join(' · ')]];
+if(t=='IFCCOMPLEXPROPERTY')return L(q[3]).flatMap(x=>prow(x,n+' › '));
+if(/^IFCQUANTITY/.test(t)){const v=q[3];if(typeof v!='number')return[];const k={IFCQUANTITYLENGTH:[UNIT,' m'],IFCQUANTITYAREA:[1,' m²'],IFCQUANTITYVOLUME:[1,' m³'],IFCQUANTITYWEIGHT:[1,' kg']}[t]||[1,''];return[[n,+(v*k[0]).toFixed(4)+k[1]]]}
+return[]}
+function matIds(id,d){d=d||0;if(!id||!E[id]||d>4)return[];const e=E[id],a=A(id),M=x=>L(x).flatMap(y=>matIds(y,d+1));
+if(e.t=='IFCMATERIAL')return[+id];
+if(e.t=='IFCMATERIALLAYER')return matIds(a[0],d+1);
+if(/^IFCMATERIAL(LAYERSET|LIST)$/.test(e.t))return M(a[0]);
+if(/USAGE$/.test(e.t))return matIds(a[0],d+1);
+if(/^IFCMATERIAL(CONSTITUENT|PROFILE)$/.test(e.t))return matIds(a[2],d+1);
+if(/^IFCMATERIAL(CONSTITUENT|PROFILE)SET$/.test(e.t))return M(a[2]);
+return[]}
+function psets(pids,suf,out){L(pids).forEach(pid=>{const pe=E[pid];if(!pe)return;const q=A(pid);let rows,sf=suf||'';
+if(pe.t=='IFCPROPERTYSET')rows=L(q[4]).flatMap(x=>prow(x));else if(pe.t=='IFCELEMENTQUANTITY'){rows=L(q[5]).flatMap(x=>prow(x));sf=' (kuantitas)'+sf}else return;
+if(rows.length)out.push({t:(q[2]||pe.t)+sf,r:rows})})}
+function props(el){const id=el.id,e=E[id],a=A(id),g=[],row=(k,v)=>{if(v!=null&&v!=='')g.push([k,v])},out=[{t:'Informasi umum',r:g}];
+row('Nama',pv(a[2]));row('Deskripsi',pv(a[3]));row('Jenis objek',pv(a[4]));row('Kelas IFC',e.t);row('GlobalId',pv(a[0]));
+if(e.t=='IFCSPACE')row('Nama panjang',pv(a[7]));else if(typeof a[7]=='string')row('Tag',a[7]);
+if(models.length>1)row('Model',el.m.name);
+row('Lantai',el.F.name);
+const tp=REL.type[id];if(tp&&E[tp])row('Tipe elemen',(pv(A(tp)[2])||'')+' ('+E[tp].t+')');
+const mt=[...new Set(matIds(REL.mat[id]).map(i=>pv(A(i)[0])))].filter(Boolean);if(mt.length)row('Material',mt.join(', '));
+if(el.src)row('Warna',el.src);
+row('ID di file','#'+id);
+psets(REL.def[id],'',out);if(tp&&E[tp])psets(A(tp)[5],' (tipe)',out);
+return out}
+/* muat IFC (mendukung banyak model) */
+function loadIFC(text,label){
+if(!/ISO-10303-21/.test(text.slice(0,300)))throw new Error('format tidak dikenali (butuh file IFC berformat STEP)');
+const M={k:++mid,name:label,u:1,on:true,g:new THREE.Group(),floors:[],REL:{def:{},type:{},mat:{},cont:{}}};
+E={};PC={};REL=M.REL;ST={};MS={};M.E=E;
+const re=/#(\d+)\s*=\s*([A-Z0-9_]+)\s*\(([\s\S]*?)\)\s*;/g,Q="'(?:[^']|'')*'",pdr=new RegExp("^"+Q+",\\s*(?:#\\d+|\\$),\\s*(?:"+Q+"|\\$),\\s*(?:"+Q+"|\\$),\\s*(?:"+Q+"|\\$),\\s*(?:#\\d+|\\$),\\s*#(\\d+)"),prods=[],sts=[];let m;
+while(m=re.exec(text))E[m[1]]={t:m[2],s:m[3]};
+for(const id in E){const e=E[id];if(e.t=='IFCBUILDINGSTOREY')sts.push(+id);else if(!/^IFC(OPENINGELEMENT|VIRTUALELEMENT|ANNOTATION|GRID)$/.test(e.t)){const q=pdr.exec(e.s);if(q&&E[q[1]]&&E[q[1]].t=='IFCPRODUCTDEFINITIONSHAPE')prods.push(+id)}}
+let u=1;const si=Object.values(E).find(e=>e.t=='IFCSIUNIT'&&/\.LENGTHUNIT\./.test(e.s));if(si)u={MILLI:.001,CENTI:.01,DECI:.1}[(/\.([A-Z]+)\.,\s*\.METRE\./.exec(si.s)||[])[1]]||1;
+if(/IFCCONVERSIONBASEDUNIT\([^;]*LENGTHUNIT[^;]*'(?:FOOT|foot)'/.test(text))u=.3048;
+UNIT=M.u=u;
+for(const id in E){const t=E[id].t,k={IFCRELDEFINESBYPROPERTIES:'def',IFCRELDEFINESBYTYPE:'type',IFCRELASSOCIATESMATERIAL:'mat',IFCRELCONTAINEDINSPATIALSTRUCTURE:'cont'}[t];if(!k)continue;
+try{const a=A(id),o=L(a[4]);if(k=='def')o.forEach(x=>(REL.def[x]=REL.def[x]||[]).push(...L(a[5])));else o.forEach(x=>REL[k][x]=a[5])}catch(x){}}
+for(const id in E){const t=E[id].t;try{
+if(t=='IFCSTYLEDITEM'){const a=A(id);if(typeof a[0]=='number'){const s=styleCol(id);if(s)ST[a[0]]=s}}
+else if(t=='IFCMATERIALDEFINITIONREPRESENTATION'){const a=A(id);L(a[2]).forEach(rp=>L(A(rp)[3]).forEach(i=>{const s=styleCol(i);if(s&&!MS[a[3]])MS[a[3]]=s}))}}catch(x){}}
+let st=sts.map((id,i)=>{const a=A(id);return{id,n:a[2]||a[7]||'Lantai '+(i+1),z:a[5]?lp(a[5]).elements[14]:0,e:a[9]||0}});
+if(st.length&&Math.max(...st.map(x=>x.z))-Math.min(...st.map(x=>x.z))<1e-6)st.forEach(x=>x.z=x.e);
+st.sort((a,b)=>a.z-b.z);st=st.slice(0,24);
+const items=[],mn=[1e18,1e18,1e18],mx=[-1e18,-1e18,-1e18];
+for(const id of prods){try{const a=A(id),o=[],mp=typeof a[5]=='number'?lp(a[5]):new M4();let sty=null;
+for(const r of A(a[6])[2]){const ra=A(r);if(ra[1]=='Body')ra[3].forEach(it=>{item(it,mp,o);if(!sty)sty=itemStyle(it)})}
+if(o.length<9)continue;const mi=matIds(REL.mat[id]);if(!sty)for(const x of mi)if(MS[x]){sty=MS[x];break}
+let z0=1e18,z1=-1e18;
+for(let i=0;i<o.length;i+=3)for(let k=0;k<3;k++){const x=o[i+k];if(x<mn[k])mn[k]=x;if(x>mx[k])mx[k]=x;if(k==2){if(x<z0)z0=x;if(x>z1)z1=x}}
+const sp=E[id].t=='IFCSPACE';items.push({id,t:E[id].t,o,z:(z0+z1)/2,sty,mn:mi.map(x=>pv(A(x)[0])).join(' '),n:(sp?[a[2],a[7]]:[a[2]]).filter(x=>typeof x=='string'&&x).join(' ')||(sp?'Ruang':E[id].t)})}catch(x){}}
+if(!items.length)throw new Error('tidak ada geometri yang bisa dibaca');
+if(!st.length)st=[{id:null,n:'Model',z:mn[2]}];
+/* titik asal bersama (federasi) */
+const cxm=(mn[0]+mx[0])/2*u,cym=(mn[1]+mx[1])/2*u,own=[cxm,cym,mn[2]*u];let org=ORG,note='';
+if(!org)org=ORG=own;else if(Math.hypot(cxm-org[0],cym-org[1])>2000){org=own;note=` ${label} berada sangat jauh dari model lain, jadi diletakkan di titik pusat.`}
+if(models[0]&&models[0].demo)dropModel(models[0]);
+M.box={x0:mn[0]*u-org[0],x1:mx[0]*u-org[0],y0:mn[2]*u-org[2],y1:mx[2]*u-org[2],z0:-(mx[1]*u-org[1]),z1:-(mn[1]*u-org[1])};M.cx=(M.box.x0+M.box.x1)/2;M.cz=(M.box.z0+M.box.z1)/2;
+const sti={};st.forEach((x,i)=>{if(x.id!=null)sti[x.id]=i});
+const fi=z=>{let k=0;st.forEach((x,i)=>{if(x.z<=z+1e-6)k=i});return k},fe=it=>{const k=sti[REL.cont[it.id]];return k!=null?k:fi(it.z)},
+cv3=o=>{const p=new Float32Array(o.length);for(let i=0;i<o.length;i+=3){p[i]=o[i]*u-org[0];p[i+1]=o[i+2]*u-org[2];p[i+2]=-(o[i+1]*u-org[1])}return p},
+geo=p=>{const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(p,3));g.computeVertexNormals();return g};
+const fl=st.map(x=>({g:new THREE.Group(),m:M,y:x.z*u-org[2],name:x.n,pk:[],rooms:[]}));
+const buf={},newRooms=[];
+items.forEach(it=>{const F=fl[fe(it)],p=cv3(it.o),key=M.k+':'+it.id,el=ELS[key]={key,id:it.id,t:it.t,n:it.n,F,m:M,src:it.sty?'dari file IFC':'bawaan (menurut kelas/material)'};
+if(it.t=='IFCSPACE'){const a=[1e18,1e18,1e18],b=[-1e18,-1e18,-1e18];let ar=0;
+for(let i=0;i<p.length;i+=9){for(let v=0;v<3;v++)for(let k=0;k<3;k++){const x=p[i+v*3+k];if(x<a[k])a[k]=x;if(x>b[k])b[k]=x}
+ar+=Math.abs((p[i+5]-p[i+2])*(p[i+6]-p[i])-(p[i+3]-p[i])*(p[i+8]-p[i+2]))/4}
+const mesh=new THREE.Mesh(geo(p),new THREE.MeshStandardMaterial({color:new THREE.Color().setHSL((rooms.length+newRooms.length)*.16%1,.55,.55),transparent:true,opacity:.28,depthWrite:false,side:DS}));
+mesh.renderOrder=1;const q={key,id:it.id,name:it.n,F,x:(a[0]+b[0])/2,z:(a[2]+b[2])/2,area:ar,mesh};mesh.userData.r=q;el.room=q;F.g.add(mesh);F.rooms.push(q);newRooms.push(q)}
+else{const kind=kindOf(it.t,it.mn),d=KIND[kind],hex=it.sty?rgb(it.sty.c):d[0],op=Math.max(.05,Math.min(1,it.sty?it.sty.o:kind=='glass'?.45:1)),bk=fl.indexOf(F)+'|'+kind+'|'+hex+'|'+op.toFixed(2),
+B=buf[bk]=buf[bk]||{F,mk:[kind,hex,op],a:[],ids:[]};B.a.push(p);B.ids.push(key)}});
+for(const k in buf){const b=buf[k],tot=b.a.reduce((n,x)=>n+x.length,0),all=new Float32Array(tot),starts=[];let o=0;b.a.forEach(x=>{starts.push(o/9);all.set(x,o);o+=x.length});starts.push(o/9);
+const mesh=new THREE.Mesh(geo(all),mat(...b.mk));mesh.userData.map={s:starts,ids:b.ids};
+b.ids.forEach((key,i)=>{const el=ELS[key];el.mesh=mesh;el.s=starts[i];el.e=starts[i+1]});b.F.g.add(mesh);b.F.pk.push(mesh)}
+M.floors=fl.filter(F=>F.pk.length||F.rooms.length);M.floors.forEach(F=>M.g.add(F.g));
+sc.add(M.g);models.push(M);floors.push(...M.floors);rooms.push(...newRooms);buildLevels();fitAll();ui();
+return note}
+async function loadMany(items){if(!items.length)return;let ok=0,notes='';const bad=[];
+for(let i=0;i<items.length;i++){const it=items[i];hint(`Memuat ${it.name} (${i+1}/${items.length})…`);
+try{const t=await it.get();await new Promise(r=>setTimeout(r,30));notes+=loadIFC(t,it.name);if(it.vid)models[models.length-1].vid=it.vid;ok++}catch(x){bad.push(`${it.name}: ${x.message}`);if(!models.some(m=>!m.demo))ORG=null}}
+libRender();hint((ok?`${ok} model dimuat. Klik elemen untuk melihat properti.`:'')+notes+(bad.length?` Gagal: ${bad.join('; ')}.`:''))}
+const readFiles=fs=>loadMany([...fs].map(f=>({name:f.name,get:()=>f.text()})));
+$('#fi').onchange=e=>{const fs=[...e.target.files];e.target.value='';readFiles(fs)};
+const stg=$('#stage');['dragover','drop'].forEach(n=>stg.addEventListener(n,e=>{e.preventDefault();if(n=='drop')readFiles(e.dataTransfer.files)}));
+/* login & pustaka terenkripsi */
+let KEY=null,REV='',LIB=[],USERS=[];
+async function fetchModel(m){const d=new TextDecoder(),parts=[];
+for(let i=0;i<m.chunks;i++){hint(`Mengunduh ${m.name} (${i+1}/${m.chunks})…`);const r=await fetch(`vault/m_${m.id}.${i}.bin?r=${REV}`);if(!r.ok)throw new Error(`bagian ${i+1} tidak ditemukan`);
+parts.push(d.decode(await aesDec(KEY,await r.arrayBuffer()),{stream:true}))}
+parts.push(d.decode());return parts.join('')}
+function libRender(){const el=$('#lib');if(!KEY){el.hidden=true;return}el.hidden=false;
+el.innerHTML='<div class="mh">Pustaka model</div>'+(LIB.length?LIB.map((m,i)=>{const on=models.some(x=>x.vid===m.id);return`<label class="mr"><input type="checkbox" data-lib="${i}"${on?' checked disabled':''}><span class="mn" title="${esc(m.name)}">${esc(m.name)}</span><span class="mu" style="margin:0">${on?'dimuat':(m.size/1048576).toFixed(1)+' MB'}</span></label>`}).join('')+'<button class="b" id="lb" style="margin:6px 0 4px">Muat terpilih</button>':'<p class="mu">Pustaka masih kosong.</p>')}
+$('#lib').onclick=e=>{if(e.target.id!='lb')return;const pick=[...document.querySelectorAll('#lib [data-lib]:checked:not(:disabled)')].map(c=>LIB[+c.dataset.lib]);
+if(!pick.length){hint('Pilih model yang ingin dimuat.');return}loadMany(pick.map(m=>({name:m.name,vid:m.id,get:()=>fetchModel(m)})))};
+$('#lo').onclick=()=>location.reload();
+(async()=>{try{const r=await fetch('vault/users.json?t='+Date.now(),{cache:'no-store'});if(!r.ok)throw 0;USERS=(await r.json()).users;if(!USERS.length)throw 0;$('#lgm').textContent=''}
+catch(x){$('#lgm').textContent='Vault belum tersedia. Buka admin.html untuk membuatnya.';$('#lgb').disabled=true}})();
+$('#lgf').onsubmit=async e=>{e.preventDefault();const b=$('#lgb'),m=$('#lgm');b.disabled=true;m.textContent='Memeriksa…';
+try{KEY=await vaultLogin(USERS,$('#lgu').value,$('#lgp').value,false)}catch(x){KEY=null;m.textContent='Nama pengguna atau kata sandi salah.';b.disabled=false;return}
+try{const r=await fetch('vault/manifest.enc?t='+Date.now(),{cache:'no-store'});if(!r.ok)throw new Error('manifest tidak ditemukan');const man=await decJSON(KEY,await r.arrayBuffer());REV=man.rev;LIB=man.models}
+catch(x){KEY=null;m.textContent='Gagal membuka pustaka: '+x.message;b.disabled=false;return}
+$('#lgp').value='';$('#lg').hidden=true;$('#lo').hidden=false;libRender()};
+buildDemo();
+(function a(){requestAnimationFrame(a);R.render(sc,camr)})();
+</script></body></html>
