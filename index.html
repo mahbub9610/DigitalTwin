@@ -60,6 +60,11 @@ summary{cursor:pointer;font-weight:600;padding:6px 0;overflow-wrap:anywhere}
 #sx .sk{display:flex;gap:6px;align-items:center;margin:6px 0 2px;font-weight:600}
 #sx .mu{color:var(--mu);font-size:12px}
 @media (max-width:700px){#sx{bottom:auto;top:10px;left:10px;right:10px;width:auto}}
+.pill{display:inline-block;font-size:11.5px;font-weight:600;padding:2px 9px;border-radius:99px;border:1px solid var(--ac);color:var(--ac)}
+#pp .ph{align-items:center}.pn{margin:8px 0 6px;font-size:16px;overflow-wrap:anywhere}
+.pi td:first-child{width:34%}.pbar{margin:8px 0 4px}.pl{font-size:11px;letter-spacing:.06em;color:var(--mu);font-weight:600;margin:12px 0 6px}
+.pcard{border:1px solid var(--bd);border-radius:9px;padding:2px 10px;margin:0 0 8px}.pcard summary{display:flex;justify-content:space-between;gap:8px}.pcard .cn{color:var(--mu);font-weight:400;font-size:12px}
+.pset{border:0;margin-top:8px}.pin{width:100%;box-sizing:border-box;font:inherit;padding:6px 8px;border:1px solid var(--bd);border-radius:6px;background:var(--bg);color:var(--tx)}
 </style></head>
 <body><div id="app">
 <div id="bar">
@@ -123,13 +128,25 @@ function fitModel(m){const x=m.box,sx=x.x1-x.x0,sy=x.y1-x.y0,sz=x.z1-x.z0;m.on=t
 function hlOff(){if(hl){if(hl.parent)hl.parent.remove(hl);if(hlOwn)hl.geometry.dispose();hl=null}}
 function hlOn(el){hlOff();const m=el.mesh;if(!m)return;let g;if(el.s==null){g=m.geometry;hlOwn=0}else{g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(m.geometry.attributes.position.array.slice(el.s*9,el.e*9),3));hlOwn=1}
 hl=new THREE.Mesh(g,HM);hl.position.copy(m.position);hl.renderOrder=2;m.parent.add(hl)}
-function showP(el){if(!el){pp.hidden=true;return}
+const PK_DEF='fire rating,is external,load bearing,reference,status,acoustic rating,thermal transmittance,length,width,height,depth,thickness,area,volume,perimeter,manufacturer,model,serial number,mark,comments,material,elevation,constraint,unconnected,structural material,type mark,assembly code,phase,cost'.split(','),KEYS=['Nama','Jenis objek','Kelas IFC','GlobalId','Tag','Model','Lantai','Tipe elemen','Material','Nama panjang'];
+const nz=s=>String(s).toLowerCase().replace(/[\s_]/g,''),lsg=k=>{try{return localStorage.getItem(k)}catch(e){return null}},lss=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
+let PKC=lsg('gtwin_pk')||'',PALL=lsg('gtwin_all')==='1',PLAST=null;
+const pkMatch=k=>{const n=nz(k);return[...PK_DEF,...PKC.split(',')].map(x=>nz(x.trim())).filter(Boolean).some(w=>n.includes(w))};
+function renderP(){if(!PLAST)return;const el=PLAST.el,sec=PLAST.sec,head=sec[0]||{r:[]},info=PALL?head.r:head.r.filter(x=>KEYS.includes(x[0])),
+rest=sec.slice(1).map(s=>({t:s.t,n:s.r.length,r:PALL?s.r:s.r.filter(x=>pkMatch(x[0]))})).filter(s=>s.r.length),tot=sec.slice(1).reduce((a,s)=>a+s.r.length,0),sh=rest.reduce((a,s)=>a+s.r.length,0);
+pp.innerHTML=`<div class="ph"><span class="pill">${esc(el.t)}</span><button class="b" id="pc">Tutup</button></div><h3 class="pn">${esc(el.n||'Tanpa nama')}</h3>`+
+`<table class="pt pi">${info.map(x=>`<tr><td>${esc(x[0])}</td><td>${esc(x[1])}${x[0]=='GlobalId'?' <button class="ib" data-copy="'+esc(x[1])+'">Salin</button>':''}</td></tr>`).join('')}</table>`+
+(tot?`<div class="pbar"><button class="b" id="pt">${PALL?'Hanya parameter penting':'Tampilkan semua properti ('+tot+')'}</button></div>`:'')+
+(rest.length?`<div class="pl">DATA BIM · ${rest.length} SET PROPERTI${PALL?'':' · '+sh+' dari '+tot+' parameter'}</div>`:(tot?'<div class="pl">Tidak ada parameter penting pada elemen ini.</div>':''))+
+rest.map((s,i)=>`<details class="pcard"${PALL?(i<3?' open':''):' open'}><summary>${esc(s.t)}<span class="cn">${PALL?s.n:s.r.length+'/'+s.n}</span></summary><table class="pt">${s.r.map(x=>`<tr><td>${esc(x[0])}</td><td>${esc(x[1])}</td></tr>`).join('')}</table></details>`).join('')+
+`<details class="pset" id="psd"><summary>Atur parameter yang ditampilkan</summary><div class="mu">Tambahkan kata kunci nama parameter, dipisah koma (contoh: FireRating, Mark). Berlaku untuk semua elemen.</div><input id="pk" class="pin" value="${esc(PKC)}" placeholder="kata kunci tambahan"></details>`;
+pp.hidden=false}
+function showP(el){if(!el){pp.hidden=true;PLAST=null;return}
 let sec;try{if(el.m.E){E=el.m.E;REL=el.m.REL;UNIT=el.m.u}sec=el.demo||props(el)}catch(x){sec=[{t:'Informasi umum',r:[['Nama',el.n],['Kelas IFC',el.t]]}]}
-pp.innerHTML=`<div class="ph"><b>${esc(el.n||'Tanpa nama')}</b><button class="b" id="pc">Tutup</button></div><div class="mu">${esc(el.t)}</div>`+
-sec.map((s,i)=>`<details${i<3?' open':''}><summary>${esc(s.t)}</summary><table class="pt">${s.r.map(x=>`<tr><td>${esc(x[0])}</td><td>${esc(x[1])}</td></tr>`).join('')}</table></details>`).join('');
-pp.hidden=false;pp.scrollTop=0;if(innerWidth<=700&&S.panel){S.panel=0;sync()}}
+PLAST={el,sec};renderP();pp.scrollTop=0;if(innerWidth<=700&&S.panel){S.panel=0;sync()}}
 function select(el){sel=el||null;hlOff();rooms.forEach(q=>q.mesh.material.opacity=sel&&sel.room===q?.6:.28);if(sel&&!sel.room)hlOn(sel);if(sel)hint('');showP(sel);list()}
-pp.onclick=e=>{if(e.target.id=='pc')select(null)};
+pp.onclick=e=>{const t=e.target;if(t.id=='pc')select(null);else if(t.id=='pt'){PALL=!PALL;lss('gtwin_all',PALL?'1':'0');renderP()}else if(t.dataset&&t.dataset.copy!=null){try{navigator.clipboard.writeText(t.dataset.copy);t.textContent='Tersalin'}catch(x){}}};
+pp.onchange=e=>{if(e.target.id=='pk'){PKC=e.target.value;lss('gtwin_pk',PKC);renderP();const d=pp.querySelector('.pset');if(d)d.open=true}};
 addEventListener('keydown',e=>{if(e.key=='Escape')select(null)});
 /* material & tekstur */
 const KIND={plaster:[0xe9e4d8],concrete:[0xb9b9b3],brick:[0xb85f45],wood:[0x9a6b3f],tile:[0xd4d8da],metal:[0x8a9099],roof:[0xa8523a],stone:[0xaaa597],glass:[0xa6d3e8],plain:[0xd5d9dd]};
