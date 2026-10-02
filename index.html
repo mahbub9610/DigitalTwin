@@ -363,20 +363,29 @@ $('#fi').onchange=e=>{const fs=[...e.target.files];e.target.value='';readFiles(f
 const stg=$('#stage');['dragover','drop'].forEach(n=>stg.addEventListener(n,e=>{e.preventDefault();if(n=='drop')readFiles(e.dataTransfer.files)}));
 /* login & pustaka terenkripsi */
 let KEY=null,REV='',LIB=[],USERS=[];
+const CN='gtwin-vault-v1';let CACHED=new Set();
+async function cget(u){try{const c=await caches.open(CN),r=await c.match(u);return r?await r.arrayBuffer():null}catch(e){return null}}
+async function cput(u,b){try{const c=await caches.open(CN);await c.put(u,new Response(b))}catch(e){}}
+function refreshCached(){if(!self.caches)return;caches.open(CN).then(async c=>{const ks=await c.keys(),cnt={},keep=new Set(LIB.map(m=>m.id));
+for(const k of ks){const mm=/m_([^.]+)\.(\d+)\.bin/.exec(k.url);if(!mm)continue;if(!keep.has(mm[1])){await c.delete(k);continue}cnt[mm[1]]=(cnt[mm[1]]||0)+1}
+CACHED=new Set(LIB.filter(m=>cnt[m.id]>=m.chunks).map(m=>m.id));libRender()}).catch(()=>{})}
 async function fetchModel(m){const d=new TextDecoder(),parts=[];
-for(let i=0;i<m.chunks;i++){hint(`Mengunduh ${m.name} (${i+1}/${m.chunks})…`);const r=await fetch(`vault/m_${m.id}.${i}.bin?r=${REV}`);if(!r.ok)throw new Error(`bagian ${i+1} tidak ditemukan`);
-parts.push(d.decode(await aesDec(KEY,await r.arrayBuffer()),{stream:true}))}
-parts.push(d.decode());return parts.join('')}
+try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}
+for(let i=0;i<m.chunks;i++){const u=`vault/m_${m.id}.${i}.bin`;let buf=await cget(u),plain=null;
+if(buf){hint(`Membuka ${m.name} dari penyimpanan perangkat (${i+1}/${m.chunks})…`);try{plain=await aesDec(KEY,buf)}catch(e){buf=null}}
+if(!plain){hint(`Mengunduh ${m.name} (${i+1}/${m.chunks})…`);const r=await fetch(`${u}?r=${REV}`);if(!r.ok)throw new Error(`bagian ${i+1} tidak ditemukan`);buf=await r.arrayBuffer();plain=await aesDec(KEY,buf);await cput(u,buf)}
+parts.push(d.decode(plain,{stream:true}))}
+parts.push(d.decode());refreshCached();return parts.join('')}
 function libRender(){const el=$('#lib');if(!KEY){el.hidden=true;return}el.hidden=false;
-el.innerHTML='<div class="mh">Pustaka model</div>'+(LIB.length?LIB.map((m,i)=>{const on=models.some(x=>x.vid===m.id);return`<label class="mr"><input type="checkbox" data-lib="${i}"${on?' checked disabled':''}><span class="mn" title="${esc(m.name)}">${esc(m.name)}</span><span class="mu" style="margin:0">${on?'dimuat':(m.size/1048576).toFixed(1)+' MB'}</span></label>`}).join('')+'<button class="b" id="lb" style="margin:6px 0 4px">Muat terpilih</button>':'<p class="mu">Pustaka masih kosong.</p>')}
-$('#lib').onclick=e=>{if(e.target.id!='lb')return;const pick=[...document.querySelectorAll('#lib [data-lib]:checked:not(:disabled)')].map(c=>LIB[+c.dataset.lib]);
+el.innerHTML='<div class="mh">Pustaka model</div>'+(LIB.length?LIB.map((m,i)=>{const on=models.some(x=>x.vid===m.id);return`<label class="mr"><input type="checkbox" data-lib="${i}"${on?' checked disabled':''}><span class="mn" title="${esc(m.name)}">${esc(m.name)}</span><span class="mu" style="margin:0">${on?'dimuat':(CACHED.has(m.id)?'tersimpan · ':'')+(m.size/1048576).toFixed(1)+' MB'}</span></label>`}).join('')+'<button class="b" id="lb" style="margin:6px 0 4px">Muat terpilih</button>'+(CACHED.size?' <button class="b" id="lc" style="margin:6px 0 4px" title="Hapus salinan terenkripsi di perangkat ini">Hapus data tersimpan</button>':''):'<p class="mu">Pustaka masih kosong.</p>')}
+$('#lib').onclick=e=>{if(e.target.id=='lc'){caches.delete(CN).then(()=>{CACHED=new Set();libRender();hint('Data tersimpan di perangkat ini sudah dihapus.')});return}if(e.target.id!='lb')return;const pick=[...document.querySelectorAll('#lib [data-lib]:checked:not(:disabled)')].map(c=>LIB[+c.dataset.lib]);
 if(!pick.length){hint('Pilih model yang ingin dimuat.');return}loadMany(pick.map(m=>({name:m.name,vid:m.id,get:()=>fetchModel(m)})))};
 $('#lo').onclick=()=>location.reload();
 (async()=>{try{const r=await fetch('vault/users.json?t='+Date.now(),{cache:'no-store'});if(!r.ok)throw 0;USERS=(await r.json()).users;if(!USERS.length)throw 0;$('#lgm').textContent=''}
 catch(x){$('#lgm').textContent='Vault belum tersedia. Buka admin.html untuk membuatnya.';$('#lgb').disabled=true}})();
 $('#lgf').onsubmit=async e=>{e.preventDefault();const b=$('#lgb'),m=$('#lgm');b.disabled=true;m.textContent='Memeriksa…';
 try{KEY=await vaultLogin(USERS,$('#lgu').value,$('#lgp').value,false)}catch(x){KEY=null;m.textContent='Nama pengguna atau kata sandi salah.';b.disabled=false;return}
-try{const r=await fetch('vault/manifest.enc?t='+Date.now(),{cache:'no-store'});if(!r.ok)throw new Error('manifest tidak ditemukan');const man=await decJSON(KEY,await r.arrayBuffer());REV=man.rev;LIB=man.models}
+try{const r=await fetch('vault/manifest.enc?t='+Date.now(),{cache:'no-store'});if(!r.ok)throw new Error('manifest tidak ditemukan');const man=await decJSON(KEY,await r.arrayBuffer());REV=man.rev;LIB=man.models;refreshCached()}
 catch(x){KEY=null;m.textContent='Gagal membuka pustaka: '+((x.name==='OperationError'||!x.message)?'kunci akun ini tidak cocok dengan pustaka (akun dibuat di vault yang berbeda). Minta pemilik membuat ulang akun Anda.':x.message);b.disabled=false;return}
 $('#lgp').value='';$('#lg').hidden=true;$('#lo').hidden=false;libRender()};
 buildDemo();
