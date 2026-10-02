@@ -51,6 +51,14 @@ summary{cursor:pointer;font-weight:600;padding:6px 0;overflow-wrap:anywhere}
 #lgf .b{width:100%;margin-top:4px}
 #lgm{min-height:1.4em}
 .b:disabled{opacity:.5;cursor:default}
+#sx{position:absolute;right:10px;bottom:10px;width:310px;background:var(--pn);border:1px solid var(--bd);border-radius:10px;padding:10px;max-height:calc(100% - 20px);overflow:auto}
+#sx .sr{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;margin:8px 0}
+#sx .sr label{display:flex;gap:5px;align-items:center;font-weight:600;min-width:58px}
+#sx input[type=range]{width:100%;accent-color:var(--ac)}
+#sx .sr .b{padding:4px 8px;font-size:12px}
+#sx .sh{display:flex;justify-content:space-between;align-items:center;gap:8px}
+#sx .mu{color:var(--mu);font-size:12px}
+@media (max-width:700px){#sx{bottom:auto;top:10px;left:10px;right:10px;width:auto}}
 </style></head>
 <body><div id="app">
 <div id="bar">
@@ -58,6 +66,7 @@ summary{cursor:pointer;font-weight:600;padding:6px 0;overflow-wrap:anywhere}
 <button class="b" id="bo" title="Pilih satu atau beberapa file IFC">Buka IFC</button>
 <select id="fl" aria-label="Filter lantai"></select>
 <button class="b" data-t="ruang">Ruang</button>
+<button class="b" data-t="potong" aria-pressed="false">Potong</button>
 <button class="b" data-t="panel">Struktur model</button>
 <button class="b" id="lo" hidden>Keluar</button>
 <span id="st"><span id="dot"></span><span id="stt">Model contoh</span></span>
@@ -66,6 +75,12 @@ summary{cursor:pointer;font-weight:600;padding:6px 0;overflow-wrap:anywhere}
 <div id="stage"><canvas id="cv"></canvas>
 <aside id="pn"><div class="ph"><b>Model</b><button class="b" id="cl">Tutup</button></div><div id="lib" hidden></div><div id="ml"></div><div id="tree"></div></aside>
 <aside id="pp" hidden></aside>
+<aside id="sx" hidden><div class="sh"><b>Potong (section)</b><span><button class="b" id="sxr">Reset</button> <button class="b" id="sxc">Tutup</button></span></div>
+<div class="mu">Aktifkan sumbu, geser untuk memotong, dan klik ⇄ untuk membalik sisi yang dipotong.</div>
+<div class="sr"><label><input type="checkbox" data-a="0"> Sumbu X</label><input type="range" min="0" max="1000" value="500" data-a="0" aria-label="Posisi potong X"><button class="b" data-f="0" title="Balik arah">⇄</button></div>
+<div class="sr"><label><input type="checkbox" data-a="1"> Tinggi (Y)</label><input type="range" min="0" max="1000" value="500" data-a="1" aria-label="Posisi potong tinggi"><button class="b" data-f="1" title="Balik arah">⇄</button></div>
+<div class="sr"><label><input type="checkbox" data-a="2"> Sumbu Z</label><input type="range" min="0" max="1000" value="500" data-a="2" aria-label="Posisi potong Z"><button class="b" data-f="2" title="Balik arah">⇄</button></div>
+<div class="mu" id="sxi"></div></aside>
 <div id="hint" hidden></div></div></div>
 <div id="lg"><form id="lgf"><h2>GTwin</h2><p class="mu">Masuk untuk membuka pustaka model.</p>
 <label>Nama pengguna<input id="lgu" autocomplete="username" required></label>
@@ -92,7 +107,23 @@ function cam(){camr.position.set(tg.x+r*Math.sin(ph)*Math.sin(th),tg.y+r*Math.co
 function focus(p,d){tg.copy(p);r=d;cam()}
 function scl(){gr.scale.setScalar(Math.max(K,.5));camr.near=.1*Math.max(K,1);camr.far=Math.max(300,K*400);camr.updateProjectionMatrix()}
 function vis(){const f=$('#fl').value;floors.forEach(F=>{F.g.visible=f=='all'||+f==F.lv;F.rooms.forEach(q=>q.mesh.visible=!!S.ruang)})}
-function sync(){document.querySelectorAll('[data-t]').forEach(b=>b.setAttribute('aria-pressed',!!S[b.dataset.t]));$('#pn').hidden=!S.panel;vis()}
+function sync(){/* potong (section) */
+const SEC=[0,1,2].map(a=>({on:0,f:0,v:.5,p:new THREE.Plane(new THREE.Vector3(a==0?1:0,a==1?1:0,a==2?1:0),0)}));
+function secBox(){let b=null;if(models.length&&!models[0].demo){b=[1e18,-1e18,1e18,-1e18,1e18,-1e18];models.forEach(m=>{const x=m.box;b[0]=Math.min(b[0],x.x0);b[1]=Math.max(b[1],x.x1);b[2]=Math.min(b[2],x.y0);b[3]=Math.max(b[3],x.y1);b[4]=Math.min(b[4],x.z0);b[5]=Math.max(b[5],x.z1)})}else{const x=models[0]&&models[0].box||{x0:-9.5,x1:9.5,y0:0,y1:9.8,z0:-5.5,z1:5.5};b=[x.x0,x.x1,x.y0,x.y1,x.z0,x.z1]}
+return b}
+function secApply(){const b=secBox(),act=[];SEC.forEach((s,a)=>{const lo=b[a*2],hi=b[a*2+1],pos=lo+(hi-lo)*s.v,sg=s.f?1:-1;s.p.normal.set(a==0?sg:0,a==1?sg:0,a==2?sg:0);s.p.constant=-sg*pos;
+const i=document.querySelector('#sx input[type=range][data-a="'+a+'"]');if(i)i.title=pos.toFixed(2)+' m';if(s.on)act.push(s.p)});
+const n=R.clippingPlanes.length;R.clippingPlanes=act;if(n!=act.length)Object.values(MATS).forEach(m=>m.needsUpdate=true);
+$('#sxi').textContent=act.length?SEC.map((s,a)=>s.on?['X','Y','Z'][a]+': '+(b[a*2]+(b[a*2+1]-b[a*2])*s.v).toFixed(2)+' m':'').filter(Boolean).join(' · '):'Belum ada bidang potong aktif.';
+$('[data-t="potong"]').setAttribute('aria-pressed',act.length>0||!$('#sx').hidden)}
+function secOk(h){return SEC.every(s=>!s.on||s.p.distanceToPoint(h.point)>=-1e-6)}
+$('#sx').oninput=e=>{const a=e.target.dataset.a;if(a==null)return;const s=SEC[+a];if(e.target.type=='range'){s.v=e.target.value/1000;if(!s.on){s.on=1;$('#sx input[type=checkbox][data-a="'+a+'"]').checked=true}}else s.on=+e.target.checked;secApply()};
+$('#sx').onclick=e=>{const f=e.target.closest('[data-f]');if(f){const s=SEC[+f.dataset.f];s.f^=1;if(!s.on){s.on=1;$('#sx input[type=checkbox][data-a="'+f.dataset.f+'"]').checked=true}secApply()}
+if(e.target.id=='sxr'){SEC.forEach((s,a)=>{s.on=0;s.f=0;s.v=.5});document.querySelectorAll('#sx input[type=checkbox]').forEach(c=>c.checked=false);document.querySelectorAll('#sx input[type=range]').forEach(c=>c.value=500);secApply()}
+if(e.target.id=='sxc'){$('#sx').hidden=true;secApply()}};
+$('[data-t="potong"]').onclick=e=>{e.stopImmediatePropagation();$('#sx').hidden=!$('#sx').hidden;secApply()};
+R.clippingPlanes=[];
+document.querySelectorAll('[data-t]').forEach(b=>{if(b.dataset.t!='potong')b.setAttribute('aria-pressed',!!S[b.dataset.t])});$('#pn').hidden=!S.panel;vis()}
 function list(){
 $('#ml').innerHTML=models.map((m,i)=>`<div class="mr"><input type="checkbox" data-v="${i}"${m.on?' checked':''} aria-label="Tampilkan ${esc(m.name)}"><span class="mn" title="${esc(m.name)}">${esc(m.name)}</span><button class="ib" data-z="${i}" title="Zoom ke model ini">Fokus</button>${m.demo?'':`<button class="ib" data-x="${i}" title="Hapus model ini">×</button>`}</div>`).join('');
 $('#tree').innerHTML=models.map((m,mi)=>(models.length>1?`<div class="mh">${esc(m.name)}</div>`:'')+m.floors.map((F,fi)=>`<div class="fl rm" data-f="${mi}-${fi}">${esc(F.name)}</div>`+F.rooms.map((q,ri)=>`<div class="rm${sel&&sel.room===q?' on':''}" data-r="${mi}-${fi}-${ri}">${esc(q.name)}</div>`).join('')).join('')).join('')}
@@ -100,7 +131,7 @@ function ui(){const n=Object.keys(ELS).length;status(models[0]&&models[0].demo?`
 function buildLevels(){const all=[...floors].sort((a,b)=>a.y-b.y);levels=[];all.forEach(F=>{let l=levels[levels.length-1];if(!l||F.y-l.y>.75)levels.push(l={y:F.y,name:F.name});F.lv=levels.length-1});
 $('#fl').innerHTML='<option value="all">Semua lantai</option>'+levels.map((l,i)=>`<option value="${i}">${esc(l.name)}</option>`).join('')}
 function fitAll(){if(!models.length)return;const b=[1e18,-1e18,1e18,-1e18,1e18,-1e18];models.forEach(m=>{const x=m.box;b[0]=Math.min(b[0],x.x0);b[1]=Math.max(b[1],x.x1);b[2]=Math.min(b[2],x.y0);b[3]=Math.max(b[3],x.y1);b[4]=Math.min(b[4],x.z0);b[5]=Math.max(b[5],x.z1)});
-const sx=b[1]-b[0],sy=b[3]-b[2],sz=b[5]-b[4];K=Math.max(sx,sz,1)/19;scl();CEN=[(b[0]+b[1])/2,(b[4]+b[5])/2];MY=(b[2]+b[3])/2;tg.set(CEN[0],MY,CEN[1]);r=Math.max(sx,sy,sz)*1.5+5;cam()}
+const sx=b[1]-b[0],sy=b[3]-b[2],sz=b[5]-b[4];K=Math.max(sx,sz,1)/19;scl();CEN=[(b[0]+b[1])/2,(b[4]+b[5])/2];MY=(b[2]+b[3])/2;tg.set(CEN[0],MY,CEN[1]);r=Math.max(sx,sy,sz)*1.5+5;cam();try{secApply()}catch(e){}}
 function fitModel(m){const x=m.box,sx=x.x1-x.x0,sy=x.y1-x.y0,sz=x.z1-x.z0;m.on=true;m.g.visible=true;focus(new THREE.Vector3((x.x0+x.x1)/2,(x.y0+x.y1)/2,(x.z0+x.z1)/2),Math.max(sx,sy,sz)*1.5+5);list()}
 /* sorotan & properti */
 function hlOff(){if(hl){if(hl.parent)hl.parent.remove(hl);if(hlOwn)hl.geometry.dispose();hl=null}}
@@ -141,7 +172,7 @@ models.push(m);floors.push(...m.floors);sc.add(m.g);buildLevels();fitAll();ui()}
 /* klik elemen */
 function elOf(h){const u=h.object.userData;if(u.r)return ELS[u.r.key];if(u.el!=null)return ELS[u.el];const s=u.map.s;let lo=0,hi=s.length-2;while(lo<hi){const m=(lo+hi+1)>>1;if(s[m]<=h.faceIndex)lo=m;else hi=m-1}return ELS[u.map.ids[lo]]}
 function click(e){const b=cv.getBoundingClientRect();mo.set((e.clientX-b.left)/b.width*2-1,-(e.clientY-b.top)/b.height*2+1);rc.setFromCamera(mo,camr);
-const t=[...floors.filter(F=>F.g.visible&&F.m.on).flatMap(F=>F.pk),...(S.ruang?rooms.filter(q=>q.F.m.on&&q.F.g.visible).map(q=>q.mesh):[])],hs=rc.intersectObjects(t);let h=hs[0];
+const t=[...floors.filter(F=>F.g.visible&&F.m.on).flatMap(F=>F.pk),...(S.ruang?rooms.filter(q=>q.F.m.on&&q.F.g.visible).map(q=>q.mesh):[])],hs=rc.intersectObjects(t).filter(secOk);let h=hs[0];
 if(h&&h.object.userData.r&&hs[1]&&!hs[1].object.userData.r&&hs[1].distance-h.distance<.03*K)h=hs[1];
 select(h?elOf(h):null)}
 /* kontrol kamera */
@@ -157,7 +188,7 @@ cv.addEventListener('wheel',e=>{e.preventDefault();r=cl(r*(1+e.deltaY*.001),2*K,
 cv.addEventListener('contextmenu',e=>e.preventDefault());
 new ResizeObserver(()=>{const s=$('#stage');R.setSize(s.clientWidth,s.clientHeight,false);camr.aspect=s.clientWidth/s.clientHeight;camr.updateProjectionMatrix()}).observe($('#stage'));
 /* tombol */
-document.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{const k=b.dataset.t;S[k]=+!S[k];sync()});
+document.querySelectorAll('[data-t]').forEach(b=>{if(b.dataset.t!='potong')b.onclick=()=>{const k=b.dataset.t;S[k]=+!S[k];sync()}});
 $('#cl').onclick=()=>{S.panel=0;sync()};
 $('#fl').onchange=()=>{vis();const v=$('#fl').value;tg.set(CEN[0],v=='all'?MY:levels[v].y+1.5*K,CEN[1]);cam()};
 $('#bo').onclick=()=>$('#fi').click();
