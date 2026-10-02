@@ -325,7 +325,7 @@ catch(x){$('#lgm').textContent='Vault belum tersedia. Buka admin.html untuk memb
 $('#lgf').onsubmit=async e=>{e.preventDefault();const b=$('#lgb'),m=$('#lgm');b.disabled=true;m.textContent='Memeriksa…';
 try{KEY=await vaultLogin(USERS,$('#lgu').value,$('#lgp').value,false)}catch(x){KEY=null;m.textContent='Nama pengguna atau kata sandi salah.';b.disabled=false;return}
 try{const r=await fetch('vault/manifest.enc?t='+Date.now(),{cache:'no-store'});if(!r.ok)throw new Error('manifest tidak ditemukan');const man=await decJSON(KEY,await r.arrayBuffer());REV=man.rev;LIB=man.models}
-catch(x){KEY=null;m.textContent='Gagal membuka pustaka: '+x.message;b.disabled=false;return}
+catch(x){KEY=null;m.textContent='Gagal membuka pustaka: '+((x.name==='OperationError'||!x.message)?'kunci akun ini tidak cocok dengan pustaka (akun dibuat di vault yang berbeda). Minta pemilik membuat ulang akun Anda.':x.message);b.disabled=false;return}
 $('#lgp').value='';$('#lg').hidden=true;$('#lo').hidden=false;libRender()};
 buildDemo();
 (function a(){requestAnimationFrame(a);R.render(sc,camr)})();
